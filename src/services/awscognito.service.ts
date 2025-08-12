@@ -8,10 +8,6 @@ import {
 import { APP_CLIENT_ID, APP_SECRET_KEY, AWS_REGION } from "../config/env";
 import { buildResponse, calculateSecretHash } from "../utils";
 
-const cognitoClient: CognitoIdentityProviderClient =
-  new CognitoIdentityProviderClient({
-    region: AWS_REGION,
-  });
 class CognitoService {
   private cognitoClient: CognitoIdentityProviderClient;
 
@@ -41,9 +37,8 @@ class CognitoService {
         Password: password,
         UserAttributes: formatAttributes,
       };
-      console.log(newUser, "newUser", "signUp");
       const command = new SignUpCommand(newUser);
-      const data = await cognitoClient.send(command);
+      const data = await this.cognitoClient.send(command);
       return buildResponse({
         data,
       });
@@ -68,7 +63,7 @@ class CognitoService {
         },
       });
 
-      const data = await cognitoClient.send(command);
+      const data = await this.cognitoClient.send(command);
       return buildResponse({
         data,
       });
@@ -90,7 +85,7 @@ class CognitoService {
         ),
       });
 
-      const data = await cognitoClient.send(command);
+      const data = await this.cognitoClient.send(command);
       return buildResponse({
         data,
       });
@@ -110,7 +105,7 @@ class CognitoService {
           APP_SECRET_KEY
         ),
       });
-      const data = await cognitoClient.send(command);
+      const data = await this.cognitoClient.send(command);
       return buildResponse({
         data,
       });

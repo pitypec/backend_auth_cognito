@@ -11,6 +11,7 @@ class LeaderboardController {
     next: NextFunction
   ): Promise<any> {
     const event: APIGatewayProxyEvent = toLambdaEvent(req);
+    console.log({ event });
 
     try {
       const authHeader =
@@ -32,10 +33,10 @@ class LeaderboardController {
 
       let connectionId = event.requestContext.connectionId;
       console.log({ connectionId });
+      const parsedBody = JSON.parse(event.body as string);
 
       // Fallback: get connectionId from body if missing (manual call)
       if (!connectionId && event.body) {
-        const parsedBody = JSON.parse(event.body);
         connectionId = parsedBody.connectionId;
       }
 
@@ -50,7 +51,7 @@ class LeaderboardController {
 
       const response = await leaderboardService.registerConnection(
         userId,
-        connectionId
+        Number(parsedBody.score)
       );
       return res.status(200).json({
         code: "00",
@@ -128,6 +129,28 @@ class LeaderboardController {
   ): Promise<any> {
     try {
       const response = await leaderboardService.getLeaderboard();
+
+      return res
+        .status(200)
+        .json({ code: "00", message: "", data: response?.data });
+    } catch (err) {
+      console.log({ err });
+      if (err instanceof Error) {
+        return res
+          .status(400)
+          .json({ code: "00", status: "failed", message: err?.message });
+      }
+      next(err);
+    }
+  }
+
+  async getWebConnections(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<any> {
+    try {
+      const response = await leaderboardService.getWebconnections();
 
       return res
         .status(200)

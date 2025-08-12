@@ -17,6 +17,7 @@ class LeaderboardRouter {
         this.router.get(`${BASE_URL}/top-score`, this.leaderboardController.getTopScore);
         this.router.post(`${BASE_URL}/submit-score`, this.leaderboardController.submitScore);
         this.router.get(`${BASE_URL}/get-leaderboard`, this.leaderboardController.getLeaderboard);
+        this.router.get(`${BASE_URL}/get-webconnections`, this.leaderboardController.getWebConnections);
         this.router.post(`${BASE_URL}/register-connection`, this.leaderboardController.registerConnection);
     }
 }

@@ -31,11 +31,12 @@ class LeaderboardService {
     });
   }
   public async registerConnection(
-    userId: string,
-    connectionId: string
+    connectionId: string,
+    score: number
   ): Promise<any> {
     try {
-      const response = await this.storeConnectionId(userId, connectionId);
+      const response = this.notifyIfHighScore(connectionId, score);
+      console.log({ storedConn: response });
       return buildResponse({
         data: response,
       });
@@ -62,13 +63,13 @@ class LeaderboardService {
       const response = await this.ddbClient.send(command);
 
       // Notify via WebSocket if score >= 1000
-      if (score >= 1000) {
-        const connectionId = await this.getConnectionId(userId);
+      //   if (score >= 1000) {
+      //     const connectionId = await this.getConnectionId(userId);
 
-        if (connectionId) {
-          await this.notifyIfHighScore(connectionId, score, userName);
-        }
-      }
+      //     if (connectionId) {
+      //       await this.notifyIfHighScore(connectionId, score, userName);
+      //     }
+      //   }
 
       return buildResponse({
         data: response,
@@ -130,6 +131,21 @@ class LeaderboardService {
       throw error;
     }
   }
+  public async getWebconnections(): Promise<any> {
+    try {
+      const command = new ScanCommand({
+        TableName: "WebSocketConnections",
+      });
+
+      const data = await this.ddbClient.send(command);
+
+      return buildResponse({
+        data: data?.Items,
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
 
   async deleteConnectionId(connectionId: string) {
     try {
@@ -159,8 +175,7 @@ class LeaderboardService {
    */
   notifyIfHighScore = async (
     connectionId: string,
-    score: number,
-    userName: string
+    score: number
   ): Promise<void> => {
     if (score <= 1000) return; // Only notify for scores > 1000
 
@@ -173,7 +188,7 @@ class LeaderboardService {
 
     const message = {
       type: "high_score",
-      content: `🎉 Congrats ${userName}, you scored ${score}!`,
+      content: `🎉 Congrats, you scored ${score}!`,
     };
 
     const command = new PostToConnectionCommand({
