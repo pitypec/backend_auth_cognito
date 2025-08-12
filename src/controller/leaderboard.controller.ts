@@ -1,32 +1,10 @@
 import { APIGatewayProxyEvent } from "aws-lambda";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { NextFunction, Request, Response } from "express";
 import { toLambdaEvent } from "../types/event";
-import {
-  AWS_REGION,
-  AWS_ACCESS_KEY_ID,
-  AWS_SECRET_ACCESS_KEY,
-} from "../config/env";
 import leaderboardService from "../services/leaderboard.service";
 
-const ddbClient: DynamoDBClient = new DynamoDBClient({
-  region: AWS_REGION,
-  credentials: {
-    accessKeyId: AWS_ACCESS_KEY_ID!,
-    secretAccessKey: AWS_SECRET_ACCESS_KEY!,
-  },
-});
-
 class LeaderboardController {
-  private ddbClient: DynamoDBClient;
-  private tableName: string;
-
-  constructor() {
-    this.ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
-    this.tableName = "Leaderboard";
-  }
-
   public async registerConnection(
     req: Request,
     res: Response,

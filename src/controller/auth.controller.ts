@@ -1,29 +1,9 @@
-import {
-  CognitoIdentityProviderClient,
-  ConfirmSignUpCommand,
-  InitiateAuthCommand,
-  SignUpCommand,
-} from "@aws-sdk/client-cognito-identity-provider";
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
+import { APIGatewayProxyEvent } from "aws-lambda";
 import { NextFunction, Request, Response } from "express";
 import { toLambdaEvent } from "../types/event";
-import { AWS_REGION, APP_SECRET_KEY, APP_CLIENT_ID } from "../config/env";
-import { calculateSecretHash } from "../utils";
 import CognitoService from "../services/awscognito.service";
-// import crypto from "crypto";
 
-const cognitoClient: CognitoIdentityProviderClient =
-  new CognitoIdentityProviderClient({
-    region: AWS_REGION,
-  });
 class AuthController {
-  private cognitoClient: CognitoIdentityProviderClient;
-
-  constructor() {
-    this.cognitoClient = new CognitoIdentityProviderClient({
-      region: AWS_REGION,
-    });
-  }
   async signup(req: Request, res: Response, next: NextFunction): Promise<any> {
     try {
       const { body = {} } = req;
@@ -85,7 +65,6 @@ class AuthController {
         data: response?.data?.AuthenticationResult,
       });
     } catch (err) {
-      console.error("Login error", err);
       if (err instanceof Error) {
         return res
           .status(400)
