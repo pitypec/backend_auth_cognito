@@ -80,7 +80,6 @@ class LeaderboardController {
         data: response?.data,
       });
     } catch (err) {
-      console.error("Register connection error", err);
       if (err instanceof Error) {
         return res
           .status(400)
@@ -135,7 +134,6 @@ class LeaderboardController {
         data: response?.data,
       });
     } catch (err) {
-      console.log({ err });
       if (err instanceof Error) {
         return res
           .status(400)
@@ -179,7 +177,6 @@ class LeaderboardController {
         .status(200)
         .json({ code: "00", message: "", data: response.data });
     } catch (err) {
-      console.log({ err });
       if (err instanceof Error) {
         return res
           .status(400)
@@ -205,7 +202,6 @@ class LeaderboardController {
         data: response,
       });
     } catch (err) {
-      console.error("Disconnect error", err);
       if (err instanceof Error) {
         return res
           .status(400)

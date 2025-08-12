@@ -95,7 +95,6 @@ class CognitoService {
         data,
       });
     } catch (error: any) {
-      console.log({ error });
       throw error;
     }
   }

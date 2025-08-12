@@ -37,7 +37,7 @@ class LeaderboardService {
         data: response,
       });
     } catch (error) {
-      throw error instanceof Error ? error?.message : error;
+      throw error;
     }
   }
   async submitScore(
@@ -71,10 +71,7 @@ class LeaderboardService {
         data: response,
       });
     } catch (error) {
-      throw error instanceof Error ? error?.message : error;
-      // return res
-      //   .status(500)
-      //   .json({ message: err instanceof Error ? err?.message : err });
+      throw error;
     }
   }
   async getLeaderboard(): Promise<any> {
@@ -100,7 +97,7 @@ class LeaderboardService {
         data: items,
       });
     } catch (error) {
-      throw error instanceof Error ? error?.message : error;
+      throw error;
     }
   }
   public async getTopScore(): Promise<any> {
@@ -127,7 +124,7 @@ class LeaderboardService {
         data: topScore,
       });
     } catch (error) {
-      throw error instanceof Error ? error?.message : error;
+      throw error;
     }
   }
 
@@ -147,7 +144,7 @@ class LeaderboardService {
         data,
       });
     } catch (error) {
-      throw error instanceof Error ? error?.message : error;
+      throw error;
     }
   }
 
@@ -185,8 +182,7 @@ class LeaderboardService {
       await client.send(command);
       console.log(`✅ WebSocket message sent to ${connectionId}`);
     } catch (error) {
-      console.error(`❌ Failed to send WebSocket message`, error);
-      throw error instanceof Error ? error?.message : error;
+      throw error;
 
       // Optionally, handle stale connection (e.g., delete from DB)
     }
@@ -207,8 +203,7 @@ class LeaderboardService {
       await ddbClient.send(command);
       console.log(`✅ Stored connectionId for user ${userId}`);
     } catch (error) {
-      console.error("❌ Failed to store connectionId:", error);
-      throw error instanceof Error ? error?.message : error;
+      throw error;
     }
   };
 
@@ -225,8 +220,7 @@ class LeaderboardService {
       const connectionId = result.Item?.connectionId?.S || null;
       return connectionId;
     } catch (error) {
-      console.error("❌ Failed to get connectionId:", error);
-      throw error instanceof Error ? error?.message : error;
+      throw error;
     }
   }
 }
