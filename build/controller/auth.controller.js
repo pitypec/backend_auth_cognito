@@ -27,7 +27,6 @@ class AuthController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const { body = {} } = req;
-                console.log({ body });
                 const attributes = body.attributes || {};
                 const formatAttributes = Object.keys(attributes).map((curr) => {
                     return {
@@ -64,7 +63,6 @@ class AuthController {
     }
     login(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
-            console.log({ req });
             const event = (0, event_1.toLambdaEvent)(req);
             console.log({ event });
             try {
@@ -124,9 +122,7 @@ class AuthController {
                     SecretHash: (0, utils_1.calculateSecretHash)(username, env_1.APP_CLIENT_ID, env_1.APP_SECRET_KEY),
                 });
                 yield cognitoClient.send(command);
-                return res
-                    .status(200)
-                    .json({
+                return res.status(200).json({
                     code: "00",
                     status: "success",
                     message: "User confirmed successfully",

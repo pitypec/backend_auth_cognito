@@ -1,26 +1,14 @@
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import {
-  DeleteItemCommand,
-  DynamoDBClient,
-  GetItemCommand,
-  PutItemCommand,
-  ScanCommand,
-} from "@aws-sdk/client-dynamodb";
-import { v4 as uuidv4 } from "uuid";
+import { APIGatewayProxyEvent } from "aws-lambda";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { NextFunction, Request, Response } from "express";
 import { toLambdaEvent } from "../types/event";
-import { LeaderboardItem } from "../types/leaderboard";
 import {
   AWS_REGION,
   AWS_ACCESS_KEY_ID,
   AWS_SECRET_ACCESS_KEY,
-  WEBSOCKET_API_ENDPOINT,
 } from "../config/env";
-import {
-  ApiGatewayManagementApiClient,
-  PostToConnectionCommand,
-} from "@aws-sdk/client-apigatewaymanagementapi";
+import leaderboardService from "../services/leaderboard.service";
 
 const ddbClient: DynamoDBClient = new DynamoDBClient({
   region: AWS_REGION,
@@ -50,10 +38,12 @@ class LeaderboardController {
       const authHeader =
         event.headers.Authorization || event.headers.authorization;
       if (!authHeader) {
-        return {
-          statusCode: 401,
-          body: JSON.stringify({ message: "Missing Authorization header" }),
-        };
+        return res.status(400).json({
+          code: "00",
+          status: "failure",
+          statusCode: 400,
+          message: "Missing Authorization header",
+        });
       }
       console.log({ authHeader });
 
@@ -80,21 +70,23 @@ class LeaderboardController {
         });
       }
 
-      await this.storeConnectionId(userId, connectionId);
-
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ message: "Connection registered successfully" }),
-      };
+      const response = await leaderboardService.registerConnection(
+        userId,
+        connectionId
+      );
+      return res.status(200).json({
+        code: "00",
+        message: "Connection registered successfully",
+        data: response?.data,
+      });
     } catch (err) {
       console.error("Register connection error", err);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({
-          message: "Failed to register connection",
-          error: err instanceof Error ? err.message : err,
-        }),
-      };
+      if (err instanceof Error) {
+        return res
+          .status(400)
+          .json({ code: "00", status: "failed", message: err?.message });
+      }
+      next(err);
     }
   }
 
@@ -131,37 +123,25 @@ class LeaderboardController {
         });
       }
 
-      const command = new PutItemCommand({
-        TableName: "leaderboard",
-        Item: {
-          id: { S: uuidv4() },
-          user_id: { S: userId },
-          user_name: { S: userName },
-          score: { N: score.toString() },
-          timestamp: { N: Math.floor(Date.now() / 1000).toString() },
-        },
-      });
-      const response = await ddbClient.send(command);
-
-      // Notify via WebSocket if score >= 1000
-      if (score >= 1000) {
-        const connectionId = await this.getConnectionId(userId);
-
-        if (connectionId) {
-          await this.notifyIfHighScore(connectionId, score, userName);
-        }
-      }
+      const response = await leaderboardService.submitScore(
+        userName,
+        userId,
+        score
+      );
 
       return res.status(200).json({
         code: "00",
         message: "Score submitted successfully",
-        data: response,
+        data: response?.data,
       });
     } catch (err) {
       console.log({ err });
-      return res
-        .status(500)
-        .json({ message: err instanceof Error ? err?.message : err });
+      if (err instanceof Error) {
+        return res
+          .status(400)
+          .json({ code: "00", status: "failed", message: err?.message });
+      }
+      next(err);
     }
   }
 
@@ -171,29 +151,19 @@ class LeaderboardController {
     next: NextFunction
   ): Promise<any> {
     try {
-      const command = new ScanCommand({
-        TableName: "leaderboard",
-        Limit: 50,
-      });
+      const response = await leaderboardService.getLeaderboard();
 
-      const data = await ddbClient.send(command);
-
-      const items: LeaderboardItem[] = (data.Items || [])
-        .map((item) => ({
-          id: item.id.S ?? "",
-          user_id: item.user_id.S ?? "",
-          user_name: item.user_name.S ?? "",
-          score: Number(item.score.N ?? 0),
-          timestamp: Number(item.timestamp.N ?? 0),
-        }))
-        .sort((a, b) => b.score - a.score);
-
-      return res.status(200).json({ code: "00", message: "", data: items });
+      return res
+        .status(200)
+        .json({ code: "00", message: "", data: response?.data });
     } catch (err) {
       console.log({ err });
-      return res
-        .status(500)
-        .json({ message: err instanceof Error ? err?.message : err });
+      if (err instanceof Error) {
+        return res
+          .status(400)
+          .json({ code: "00", status: "failed", message: err?.message });
+      }
+      next(err);
     }
   }
 
@@ -203,140 +173,47 @@ class LeaderboardController {
     next: NextFunction
   ): Promise<any> {
     try {
-      const command = new ScanCommand({
-        TableName: "leaderboard",
-      });
+      const response = await leaderboardService.getTopScore();
 
-      const data = await ddbClient.send(command);
-
-      const items: LeaderboardItem[] = (data.Items || [])
-        .map((item) => ({
-          id: item.id.S ?? "",
-          user_id: item.user_id.S ?? "",
-          user_name: item.user_name.S ?? "",
-          score: Number(item.score.N ?? 0),
-          timestamp: Number(item.timestamp.N ?? 0),
-        }))
-        .sort((a, b) => b.score - a.score);
-
-      const topScore = items.length > 0 ? items[0] : null;
-
-      return res.status(200).json({ code: "00", message: "", data: topScore });
+      return res
+        .status(200)
+        .json({ code: "00", message: "", data: response.data });
     } catch (err) {
       console.log({ err });
-      return res
-        .status(500)
-        .json({ message: err instanceof Error ? err?.message : err });
+      if (err instanceof Error) {
+        return res
+          .status(400)
+          .json({ code: "00", status: "failed", message: err?.message });
+      }
+      next(err);
     }
   }
 
-  /**
-   * Notify user over WebSocket if score > 1000
-   *
-   * @param connectionId The WebSocket connection ID (stored during $connect)
-   * @param score The user’s score
-   */
-  notifyIfHighScore = async (
-    connectionId: string,
-    score: number,
-    userName: string
-  ): Promise<void> => {
-    if (score <= 1000) return; // Only notify for scores > 1000
+  async deleteConnectionId(req: Request, res: Response, next: NextFunction) {
+    const event: APIGatewayProxyEvent = toLambdaEvent(req);
 
-    // const endpoint = process.env.WEBSOCKET_API_ENDPOINT; // e.g., 'https://xxxxxxx.execute-api.us-east-1.amazonaws.com/prod'
-
-    const client = new ApiGatewayManagementApiClient({
-      region: AWS_REGION,
-      endpoint: WEBSOCKET_API_ENDPOINT,
-    });
-
-    const message = {
-      type: "high_score",
-      content: `🎉 Congrats ${userName}, you scored ${score}!`,
-    };
-
-    const command = new PostToConnectionCommand({
-      ConnectionId: connectionId,
-      Data: Buffer.from(JSON.stringify(message)),
-    });
+    const connectionId = event.requestContext.connectionId as string;
 
     try {
-      await client.send(command);
-      console.log(`✅ WebSocket message sent to ${connectionId}`);
-    } catch (error) {
-      console.error(`❌ Failed to send WebSocket message`, error);
-      // Optionally, handle stale connection (e.g., delete from DB)
-    }
-  };
-
-  storeConnectionId = async (
-    userId: string,
-    connectionId: string
-  ): Promise<void> => {
-    const command = new PutItemCommand({
-      TableName: "WebSocketConnections",
-      Item: {
-        userId: { S: userId },
-        connectionId: { S: connectionId },
-      },
-    });
-
-    try {
-      await ddbClient.send(command);
-      console.log(`✅ Stored connectionId for user ${userId}`);
-    } catch (error) {
-      console.error("❌ Failed to store connectionId:", error);
-      throw error;
-    }
-  };
-
-  async getConnectionId(userId: string): Promise<string | null> {
-    const command = new GetItemCommand({
-      TableName: "WebSocketConnections",
-      Key: {
-        userId: { S: userId },
-      },
-    });
-
-    try {
-      const result = await ddbClient.send(command);
-      const connectionId = result.Item?.connectionId?.S || null;
-      return connectionId;
-    } catch (error) {
-      console.error("❌ Failed to get connectionId:", error);
-      throw error;
+      const response = await leaderboardService.deleteConnectionId(
+        connectionId
+      );
+      return res.status(200).json({
+        code: "00",
+        success: "success",
+        message: "Confirmation code resent",
+        data: response,
+      });
+    } catch (err) {
+      console.error("Disconnect error", err);
+      if (err instanceof Error) {
+        return res
+          .status(400)
+          .json({ code: "00", status: "failed", message: err?.message });
+      }
+      next(err);
     }
   }
-
-  // async deleteConnectionId(req: Request, res: Response, next: NextFunction) {
-  //   const event: APIGatewayProxyEvent = toLambdaEvent(req);
-
-  //   const connectionId = event.requestContext.connectionId;
-
-  //   try {
-  //     // Optional: You can reverse lookup by connectionId if needed
-  //     // For simplicity, assume connectionId is also the key
-  //     const scanCommand = new DeleteItemCommand({
-  //       TableName: "WebSocketConnections",
-  //       Key: {
-  //         userId: { S: connectionId }, // update if your PK is not connectionId
-  //       },
-  //     });
-
-  //     await ddbClient.send(scanCommand);
-
-  //     return {
-  //       statusCode: 200,
-  //       body: "Disconnected.",
-  //     };
-  //   } catch (err) {
-  //     console.error("Disconnect error", err);
-  //     return {
-  //       statusCode: 500,
-  //       body: "Failed to disconnect.",
-  //     };
-  //   }
-  // }
 }
 
 export default LeaderboardController;
