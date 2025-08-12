@@ -19,14 +19,17 @@ import { buildResponse } from "../utils";
 import { LeaderboardItem } from "../types/leaderboard";
 import { v4 as uuidv4 } from "uuid";
 
-const ddbClient: DynamoDBClient = new DynamoDBClient({
-  region: AWS_REGION,
-  credentials: {
-    accessKeyId: AWS_ACCESS_KEY_ID!,
-    secretAccessKey: AWS_SECRET_ACCESS_KEY!,
-  },
-});
 class LeaderboardService {
+  private ddbClient: DynamoDBClient;
+  constructor() {
+    this.ddbClient = new DynamoDBClient({
+      region: AWS_REGION,
+      credentials: {
+        accessKeyId: AWS_ACCESS_KEY_ID!,
+        secretAccessKey: AWS_SECRET_ACCESS_KEY!,
+      },
+    });
+  }
   public async registerConnection(
     userId: string,
     connectionId: string
@@ -56,7 +59,7 @@ class LeaderboardService {
           timestamp: { N: Math.floor(Date.now() / 1000).toString() },
         },
       });
-      const response = await ddbClient.send(command);
+      const response = await this.ddbClient.send(command);
 
       // Notify via WebSocket if score >= 1000
       if (score >= 1000) {
@@ -81,7 +84,7 @@ class LeaderboardService {
         Limit: 50,
       });
 
-      const data = await ddbClient.send(command);
+      const data = await this.ddbClient.send(command);
 
       const items: LeaderboardItem[] = (data.Items || [])
         .map((item) => ({
@@ -106,7 +109,7 @@ class LeaderboardService {
         TableName: "leaderboard",
       });
 
-      const data = await ddbClient.send(command);
+      const data = await this.ddbClient.send(command);
 
       const items: LeaderboardItem[] = (data.Items || [])
         .map((item) => ({
@@ -138,7 +141,7 @@ class LeaderboardService {
           userId: { S: connectionId }, // update if your PK is not connectionId
         },
       });
-      const data = await ddbClient.send(scanCommand);
+      const data = await this.ddbClient.send(scanCommand);
 
       return buildResponse({
         data,
@@ -183,8 +186,6 @@ class LeaderboardService {
       console.log(`✅ WebSocket message sent to ${connectionId}`);
     } catch (error) {
       throw error;
-
-      // Optionally, handle stale connection (e.g., delete from DB)
     }
   };
   storeConnectionId = async (
@@ -200,8 +201,7 @@ class LeaderboardService {
     });
 
     try {
-      await ddbClient.send(command);
-      console.log(`✅ Stored connectionId for user ${userId}`);
+      await this.ddbClient.send(command);
     } catch (error) {
       throw error;
     }
@@ -216,7 +216,7 @@ class LeaderboardService {
     });
 
     try {
-      const result = await ddbClient.send(command);
+      const result = await this.ddbClient.send(command);
       const connectionId = result.Item?.connectionId?.S || null;
       return connectionId;
     } catch (error) {
