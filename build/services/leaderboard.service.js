@@ -22,8 +22,8 @@ class LeaderboardService {
          * @param connectionId The WebSocket connection ID (stored during $connect)
          * @param score The user’s score
          */
-        this.notifyIfHighScore = (connectionId, score, userName) => __awaiter(this, void 0, void 0, function* () {
-            if (score <= 1000)
+        this.notifyIfHighScore = (connectionId, score) => __awaiter(this, void 0, void 0, function* () {
+            if (Number(score) <= 1000)
                 return; // Only notify for scores > 1000
             // const endpoint = process.env.WEBSOCKET_API_ENDPOINT; // e.g., 'https://xxxxxxx.execute-api.us-east-1.amazonaws.com/prod'
             const client = new client_apigatewaymanagementapi_1.ApiGatewayManagementApiClient({
@@ -32,7 +32,7 @@ class LeaderboardService {
             });
             const message = {
                 type: "high_score",
-                content: `🎉 Congrats ${userName}, you scored ${score}!`,
+                content: `🎉 Congrats, you scored ${String(score)}!`,
             };
             const command = new client_apigatewaymanagementapi_1.PostToConnectionCommand({
                 ConnectionId: connectionId,
@@ -69,11 +69,10 @@ class LeaderboardService {
             },
         });
     }
-    registerConnection(userId, connectionId) {
+    registerConnection(connectionId, score) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const response = yield this.storeConnectionId(userId, connectionId);
-                console.log({ storedConn: response });
+                const response = yield this.notifyIfHighScore(connectionId, score);
                 return (0, utils_1.buildResponse)({
                     data: response,
                 });

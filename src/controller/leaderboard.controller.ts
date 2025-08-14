@@ -48,9 +48,10 @@ class LeaderboardController {
           message: "Invalid userId or connectionId",
         });
       }
+      console.log({ connectionId, score: parsedBody.score });
 
       const response = await leaderboardService.registerConnection(
-        userId,
+        connectionId,
         Number(parsedBody.score)
       );
       return res.status(200).json({

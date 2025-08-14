@@ -35,8 +35,7 @@ class LeaderboardService {
     score: number
   ): Promise<any> {
     try {
-      const response = this.notifyIfHighScore(connectionId, score);
-      console.log({ storedConn: response });
+      const response = await this.notifyIfHighScore(connectionId, score);
       return buildResponse({
         data: response,
       });
@@ -61,15 +60,6 @@ class LeaderboardService {
         },
       });
       const response = await this.ddbClient.send(command);
-
-      // Notify via WebSocket if score >= 1000
-      //   if (score >= 1000) {
-      //     const connectionId = await this.getConnectionId(userId);
-
-      //     if (connectionId) {
-      //       await this.notifyIfHighScore(connectionId, score, userName);
-      //     }
-      //   }
 
       return buildResponse({
         data: response,
@@ -177,7 +167,7 @@ class LeaderboardService {
     connectionId: string,
     score: number
   ): Promise<void> => {
-    if (score <= 1000) return; // Only notify for scores > 1000
+    if (Number(score) <= 1000) return; // Only notify for scores > 1000
 
     // const endpoint = process.env.WEBSOCKET_API_ENDPOINT; // e.g., 'https://xxxxxxx.execute-api.us-east-1.amazonaws.com/prod'
 
@@ -188,9 +178,8 @@ class LeaderboardService {
 
     const message = {
       type: "high_score",
-      content: `🎉 Congrats, you scored ${score}!`,
+      content: `🎉 Congrats, you scored ${String(score)}!`,
     };
-
     const command = new PostToConnectionCommand({
       ConnectionId: connectionId,
       Data: Buffer.from(JSON.stringify(message)),

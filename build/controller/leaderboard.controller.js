@@ -37,10 +37,9 @@ class LeaderboardController {
                 const userId = decoded === null || decoded === void 0 ? void 0 : decoded.sub;
                 let connectionId = event.requestContext.connectionId;
                 console.log({ connectionId });
+                const parsedBody = JSON.parse(event.body);
                 // Fallback: get connectionId from body if missing (manual call)
                 if (!connectionId && event.body) {
-                    const parsedBody = JSON.parse(event.body);
-                    console.log({ parsedBody });
                     connectionId = parsedBody.connectionId;
                 }
                 if (!userId || !connectionId) {
@@ -51,7 +50,8 @@ class LeaderboardController {
                         message: "Invalid userId or connectionId",
                     });
                 }
-                const response = yield leaderboard_service_1.default.registerConnection(userId, connectionId);
+                console.log({ connectionId, score: parsedBody.score });
+                const response = yield leaderboard_service_1.default.registerConnection(connectionId, Number(parsedBody.score));
                 return res.status(200).json({
                     code: "00",
                     message: "Connection registered successfully",
